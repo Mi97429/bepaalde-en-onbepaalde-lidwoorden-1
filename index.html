@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Frans Oefening A - Flow Mode</title>
+    <title>Frans Oefening A - Final Version</title>
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;800&display=swap" rel="stylesheet">
     <style>
         /* RESET */
@@ -29,10 +29,9 @@
             border-bottom: 3px solid #e5e5e5;
             padding: 10px 20px;
             box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-            transition: all 0.3s ease; /* Voor de gouden gloed */
+            transition: all 0.3s ease;
         }
 
-        /* DE 'ON FIRE' MODUS STYLE */
         .game-header.high-streak {
             border-bottom-color: #ff9600;
             background-color: #fffaf0;
@@ -52,10 +51,8 @@
             transition: width 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
         
-        /* Progress balk wordt ook goud bij high streak */
         .game-header.high-streak .progress-fill {
-            background-color: #ff9600;
-            box-shadow: 0 0 10px #ff9600;
+            background-color: #ff9600; box-shadow: 0 0 10px #ff9600;
         }
 
         .stats-container { display: flex; gap: 10px; align-items: center; }
@@ -73,12 +70,11 @@
         }
 
         .streak-counter {
-            font-weight: 900; color: #e5e5e5; /* Grijs als laag */
-            font-size: 1.1rem; display: flex; align-items: center;
-            gap: 5px; white-space: nowrap; transition: color 0.3s;
+            font-weight: 900; color: #e5e5e5; font-size: 1.1rem; 
+            display: flex; align-items: center; gap: 5px; white-space: nowrap; 
+            transition: color 0.3s;
         }
-        
-        .streak-counter.active { color: #ff9600; } /* Oranje als > 0 */
+        .streak-counter.active { color: #ff9600; }
 
         /* --- OEFENINGEN --- */
         .exercise-container {
@@ -123,10 +119,7 @@
             animation: floatUp 0.8s ease-out forwards;
             text-shadow: 0 2px 0 #fff;
         }
-        
-        /* Standaard blauw */
         .fp-normal { color: #1cb0f6; }
-        /* Goud bij streak */
         .fp-gold { color: #ff9600; font-size: 2rem; text-shadow: 0 2px 5px rgba(0,0,0,0.1); }
 
         @keyframes floatUp {
@@ -140,6 +133,39 @@
             border-radius: 6px; border-left: 3px solid #ff4b4b; width: fit-content;
         }
         .hint-text.visible { display: block; animation: slideDown 0.3s; }
+
+        /* OVERLAYS (End & Milestone) */
+        .overlay-screen {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.6); z-index: 20000; display: none;
+            justify-content: center; align-items: center; flex-direction: column;
+            animation: fadeIn 0.3s;
+        }
+
+        .overlay-content {
+            background: white; padding: 40px 60px; border-radius: 20px;
+            text-align: center; animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3); border-bottom: 6px solid #e5e5e5;
+        }
+
+        .overlay-title { font-size: 2.5rem; color: #58cc02; font-weight: 900; margin: 0; text-transform: uppercase;}
+        .overlay-sub { font-size: 1.2rem; color: #777; margin-top: 10px; margin-bottom: 25px;}
+        
+        .restart-btn {
+            background-color: #58cc02; color: white; border: none; padding: 15px 30px;
+            border-radius: 12px; font-size: 1.1rem; font-weight: 800; text-transform: uppercase;
+            cursor: pointer; box-shadow: 0 4px 0 #46a302; transition: transform 0.1s;
+        }
+        .restart-btn:active { transform: translateY(4px); box-shadow: none; }
+        .restart-btn:hover { background-color: #61d906; }
+
+        .confetti {
+            position: fixed; width: 12px; height: 12px;
+            animation: fall linear forwards; z-index: 19999;
+        }
+        @keyframes fall { to { transform: translateY(100vh) rotate(720deg); } }
+        @keyframes popIn { 0% { transform: scale(0.5); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         @keyframes slideDown { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
 
@@ -151,6 +177,16 @@
     </style>
 </head>
 <body>
+
+    <div id="endScreen" class="overlay-screen">
+        <div class="overlay-content">
+            <div class="overlay-title">🎉 VOLTOOID!</div>
+            <div class="overlay-sub">
+                Je eindscore: <strong style="color:#1cb0f6"><span id="finalScore">0</span> XP</strong>
+            </div>
+            <button class="restart-btn" onclick="location.reload()">Opnieuw Spelen</button>
+        </div>
+    </div>
 
     <div class="game-header" id="mainHeader">
         <div class="header-left">
@@ -195,21 +231,30 @@
             osc.connect(gain); gain.connect(audioCtx.destination);
             
             if (type === 'success') {
-                // Korte, frisse 'ping'
-                osc.type = 'sine'; osc.frequency.setValueAtTime(800, audioCtx.currentTime);
-                gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
-                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
-                osc.start(); osc.stop(audioCtx.currentTime + 0.15);
+                osc.type = 'sine'; osc.frequency.setValueAtTime(600, audioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(1200, audioCtx.currentTime + 0.1);
+                gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+                osc.start(); osc.stop(audioCtx.currentTime + 0.3);
             } else if (type === 'streak') {
-                // "Power-up" geluid (oplopende toon), niet storend
                 osc.type = 'triangle';
                 osc.frequency.setValueAtTime(400, audioCtx.currentTime);
                 osc.frequency.linearRampToValueAtTime(800, audioCtx.currentTime + 0.2);
                 gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
                 gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
                 osc.start(); osc.stop(audioCtx.currentTime + 0.3);
+            } else if (type === 'victory') {
+                // Fanfare arpeggio
+                const now = audioCtx.currentTime;
+                [523, 659, 783, 1046].forEach((freq, i) => {
+                    const o = audioCtx.createOscillator(); const g = audioCtx.createGain();
+                    o.type = 'triangle'; o.connect(g); g.connect(audioCtx.destination);
+                    o.frequency.value = freq; 
+                    g.gain.setValueAtTime(0.2, now + i*0.15);
+                    g.gain.exponentialRampToValueAtTime(0.01, now + i*0.15 + 0.6);
+                    o.start(now + i*0.15); o.stop(now + i*0.15 + 0.6);
+                });
             } else {
-                // Error (zacht en kort)
                 osc.type = 'sawtooth'; osc.frequency.setValueAtTime(150, audioCtx.currentTime);
                 gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
                 gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
@@ -226,6 +271,8 @@
         const scoreEl = document.getElementById('scoreCount');
         const progressEl = document.getElementById('progressBar');
         const headerEl = document.getElementById('mainHeader');
+        const endScreen = document.getElementById('endScreen');
+        const finalScoreEl = document.getElementById('finalScore');
 
         // --- EVENTS ---
         document.querySelectorAll('.gap-input').forEach(input => {
@@ -252,26 +299,24 @@
                 input.classList.remove('error'); input.classList.add('correct');
                 hintBox.classList.remove('visible');
                 
-                // GAME LOGIC
                 streak++; correctCount++;
                 
-                // Score berekening
                 let isHighStreak = streak >= 5;
-                let points = 10;
+                let points = isHighStreak ? 20 : 10;
                 
-                if (isHighStreak) {
-                    points = 20; // Dubbele punten bij high streak!
-                    playSound('streak'); // Speciaal geluid
-                } else {
-                    playSound('success'); // Normaal geluid
-                }
+                if (isHighStreak) playSound('streak'); else playSound('success');
 
                 score += points;
-                
-                // Visual updates
                 showFloatingPoints(input, points, isHighStreak);
                 updateUI();
-                focusNextInput(input);
+                
+                // CHECK IF GAME OVER
+                if (correctCount === totalInputs) {
+                    setTimeout(finishGame, 1000);
+                } else {
+                    focusNextInput(input);
+                }
+
             } else {
                 input.classList.remove('error');
             }
@@ -283,22 +328,16 @@
             const hintBox = input.parentElement.querySelector('.hint-text');
 
             if (!isCorrect(input)) {
-                // Soft checks (Hoofdletter etc)
                 if (val.toLowerCase() === ans.toLowerCase()) {
-                    showHint(hintBox, "💡 Let op de hoofdletter!");
+                    showHint(hintBox, "💡 Bijna! Hoofdletter?");
                     input.classList.add('error'); playSound('error'); return;
                 }
                 if (val.toLowerCase() === input.dataset.lastWrong.toLowerCase()) {
                     input.classList.add('error'); playSound('error');
                     setTimeout(() => { input.value = ''; }, 500); return;
                 }
-                
-                // Echte fout
                 input.dataset.lastWrong = val; input.classList.add('error');
-                playSound('error'); 
-                
-                streak = 0; // Reset streak
-                updateUI(); // Reset UI (glow gaat weg)
+                playSound('error'); streak = 0; updateUI();
 
                 let mistakes = parseInt(input.dataset.mistakes) + 1;
                 input.dataset.mistakes = mistakes;
@@ -307,11 +346,22 @@
                 else if (mistakes === 2) {
                      if (ans.toLowerCase() === 'la') showHint(hintBox, "💡 Tip: Vrouwelijk.");
                      else if (ans.toLowerCase() === 'le') showHint(hintBox, "💡 Tip: Mannelijk.");
-                     else showHint(hintBox, "💡 Kijk goed naar de spelling.");
+                     else showHint(hintBox, "💡 Kijk naar de spelling.");
                 } else showHint(hintBox, `Antwoord: <b>${ans}</b>`);
 
                 setTimeout(() => { input.value = ''; input.focus(); }, 600);
             }
+        }
+
+        function finishGame() {
+            playSound('victory');
+            finalScoreEl.innerText = score;
+            endScreen.style.display = 'flex';
+            
+            // Start Infinite Confetti
+            setInterval(() => {
+                for(let i=0; i<3; i++) createConfetti();
+            }, 200);
         }
 
         function updateUI() {
@@ -319,18 +369,11 @@
             animateValue(scoreEl, parseInt(scoreEl.innerText), score, 300);
             progressEl.style.width = (correctCount / totalInputs) * 100 + '%';
 
-            // STREAK MANAGEMENT
-            if (streak > 0) {
-                streakContainer.classList.add('active');
-            } else {
-                streakContainer.classList.remove('active');
-            }
+            if (streak > 0) streakContainer.classList.add('active');
+            else streakContainer.classList.remove('active');
 
-            // FLOW MODE (High Streak Visuals)
             if (streak >= 5) {
-                if (!headerEl.classList.contains('high-streak')) {
-                    headerEl.classList.add('high-streak');
-                }
+                if (!headerEl.classList.contains('high-streak')) headerEl.classList.add('high-streak');
             } else {
                 headerEl.classList.remove('high-streak');
             }
@@ -339,12 +382,23 @@
         function showFloatingPoints(el, amt, isGold) {
             const rect = el.getBoundingClientRect();
             const f = document.createElement('div');
-            // Kies class op basis van streak (blauw of goud)
             f.className = isGold ? 'floating-points fp-gold' : 'floating-points fp-normal';
             f.innerText = `+${amt} XP`;
             f.style.left = (rect.left + 10) + 'px'; f.style.top = (rect.top - 20) + 'px';
             document.body.appendChild(f);
             setTimeout(() => f.remove(), 800);
+        }
+
+        function createConfetti() {
+            const colors = ['#f00', '#0f0', '#00f', '#ff0', '#0ff', '#f0f', '#58cc02'];
+            const c = document.createElement('div');
+            c.className = 'confetti';
+            c.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+            c.style.left = Math.random() * 100 + 'vw';
+            c.style.animationDuration = (Math.random() * 2 + 1) + 's';
+            c.style.top = '-10px';
+            document.body.appendChild(c);
+            setTimeout(() => c.remove(), 3000);
         }
 
         function animateValue(obj, start, end, duration) {
