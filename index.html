@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Frans Oefening A - Flow Mode</title>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;800&display=swap" rel="stylesheet">
+    <style>
+        /* RESET */
+        html, body {
+            margin: 0; padding: 0; width: 100%; height: 100%;
+            font-family: 'Nunito', sans-serif;
+            background-color: transparent;
+            color: #4b4b4b;
+        }
+        body { overflow-y: auto; overflow-x: hidden; }
+
+        /* --- STICKY HEADER --- */
+        .game-header {
+            position: -webkit-sticky; 
+            position: sticky;
+            top: 0;
+            z-index: 99999;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 15px;
+            background-color: #ffffff;
+            border-bottom: 3px solid #e5e5e5;
+            padding: 10px 20px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            transition: all 0.3s ease; /* Voor de gouden gloed */
+        }
+
+        /* DE 'ON FIRE' MODUS STYLE */
+        .game-header.high-streak {
+            border-bottom-color: #ff9600;
+            background-color: #fffaf0;
+            box-shadow: 0 4px 20px rgba(255, 150, 0, 0.3);
+        }
+
+        .header-left { display: flex; align-items: center; gap: 15px; flex-grow: 1; }
+
+        .progress-track {
+            flex-grow: 1; height: 14px; background-color: #f0f0f0;
+            border-radius: 7px; overflow: hidden; max-width: 400px;
+            border: 1px solid #e0e0e0;
+        }
+
+        .progress-fill {
+            height: 100%; width: 0%; background-color: #58cc02;
+            transition: width 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        
+        /* Progress balk wordt ook goud bij high streak */
+        .game-header.high-streak .progress-fill {
+            background-color: #ff9600;
+            box-shadow: 0 0 10px #ff9600;
+        }
+
+        .stats-container { display: flex; gap: 10px; align-items: center; }
+
+        .score-display {
+            font-weight: 900; color: #1cb0f6; font-size: 1.1rem;
+            background: #eefaff; border: 2px solid #1cb0f6;
+            padding: 4px 10px; border-radius: 12px; white-space: nowrap;
+            transition: all 0.3s;
+        }
+        
+        .game-header.high-streak .score-display {
+            color: #d35400; border-color: #ff9600; background: #fff5e6;
+            transform: scale(1.05);
+        }
+
+        .streak-counter {
+            font-weight: 900; color: #e5e5e5; /* Grijs als laag */
+            font-size: 1.1rem; display: flex; align-items: center;
+            gap: 5px; white-space: nowrap; transition: color 0.3s;
+        }
+        
+        .streak-counter.active { color: #ff9600; } /* Oranje als > 0 */
+
+        /* --- OEFENINGEN --- */
+        .exercise-container {
+            width: 100%; max-width: 800px; display: flex; flex-direction: column;
+            gap: 15px; padding: 20px; box-sizing: border-box;
+        }
+
+        h2 { color: #58cc02; font-weight: 800; margin: 0 0 5px 0; }
+        .instruction-sub { color: #777; font-size: 0.9rem; margin-bottom: 10px; font-style: italic; }
+
+        .sentence-row {
+            background-color: #ffffff; border: 2px solid #e5e5e5;
+            border-radius: 16px; padding: 15px 20px; font-size: 1.1rem;
+            line-height: 2; box-shadow: 0 4px 0 #e5e5e5; position: relative;
+            transition: transform 0.2s, border-color 0.2s;
+        }
+        .sentence-row:hover { transform: translateY(-2px); border-color: #cecece; }
+
+        .gap-input {
+            border: 2px solid #e5e5e5; background: #f7f7f7; border-radius: 10px;
+            padding: 8px 5px; font-family: inherit; font-size: 1.1rem; width: 60px;
+            text-align: center; color: #1cb0f6; font-weight: 800; outline: none;
+            transition: all 0.2s ease; margin: 0 4px;
+        }
+        .gap-input:focus {
+            border-color: #1cb0f6; background: #ffffff; transform: scale(1.1);
+            box-shadow: 0 5px 15px rgba(28, 176, 246, 0.2); z-index: 10;
+        }
+        .gap-input.correct {
+            background-color: #d7ffb8; border-color: #58cc02; color: #58cc02;
+            pointer-events: none;
+        }
+        .gap-input.error {
+            border-color: #ff4b4b; background-color: #ffdfe0; color: #ff4b4b;
+            animation: shake 0.4s;
+        }
+
+        /* --- EFFECTS --- */
+        .floating-points {
+            position: fixed; font-weight: 900; font-size: 1.5rem;
+            pointer-events: none; z-index: 10000;
+            animation: floatUp 0.8s ease-out forwards;
+            text-shadow: 0 2px 0 #fff;
+        }
+        
+        /* Standaard blauw */
+        .fp-normal { color: #1cb0f6; }
+        /* Goud bij streak */
+        .fp-gold { color: #ff9600; font-size: 2rem; text-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+
+        @keyframes floatUp {
+            0% { opacity: 1; transform: translateY(0) scale(1); }
+            100% { opacity: 0; transform: translateY(-60px) scale(1.2); }
+        }
+
+        .hint-text {
+            display: none; font-size: 0.85rem; color: #d32f2f; margin-top: 5px;
+            font-weight: bold; background-color: #fff5f5; padding: 5px 10px;
+            border-radius: 6px; border-left: 3px solid #ff4b4b; width: fit-content;
+        }
+        .hint-text.visible { display: block; animation: slideDown 0.3s; }
+        @keyframes slideDown { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
+
+        @media (max-width: 600px) {
+            .game-header { flex-wrap: wrap; padding: 10px; }
+            .header-left { width: 100%; margin-bottom: 5px; }
+            .stats-container { width: 100%; justify-content: space-between; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="game-header" id="mainHeader">
+        <div class="header-left">
+            <div class="progress-track">
+                <div class="progress-fill" id="progressBar"></div>
+            </div>
+        </div>
+        <div class="stats-container">
+            <div class="score-display">
+                💎 <span id="scoreCount">0</span> XP
+            </div>
+            <div class="streak-counter" id="streakContainer">
+                🔥 <span id="streakCount">0</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="exercise-container">
+        <h2>Oefening A</h2>
+        <div class="instruction-sub">Vul in (le, la, l', les). Begin van zin = Hoofdletter!</div>
+
+        <div class="sentence-row">1. Tu connais <input type="text" class="gap-input" data-ans="la"> Finlande ? Oui, j'adore <input type="text" class="gap-input" data-ans="la"> capitale, Helsinki.<div class="hint-text"></div></div>
+        <div class="sentence-row">2. Elles partent pour <input type="text" class="gap-input" data-ans="le"> Portugal.<div class="hint-text"></div></div>
+        <div class="sentence-row">3. <input type="text" class="gap-input" data-ans="Le"> Japon est <input type="text" class="gap-input" data-ans="le"> pays des sushis.<div class="hint-text"></div></div>
+        <div class="sentence-row">4. Quelle est votre région préférée ? <input type="text" class="gap-input" data-ans="La"> Bretagne.<div class="hint-text"></div></div>
+        <div class="sentence-row">5. Quel est le fleuve le plus long d'Europe ? C'est <input type="text" class="gap-input" data-ans="le"> Danube.<div class="hint-text"></div></div>
+        <div class="sentence-row">6. Vous connaissez <input type="text" class="gap-input" data-ans="l'"> Afrique ? Pas du tout !<div class="hint-text"></div></div>
+        <div class="sentence-row">7. <input type="text" class="gap-input" data-ans="La"> Belgique a une monarchie constitutionnelle.<div class="hint-text"></div></div>
+        <div class="sentence-row">8. <input type="text" class="gap-input" data-ans="Les"> Baléares restent très appréciées des touristes.<div class="hint-text"></div></div>
+        <div class="sentence-row">9. <input type="text" class="gap-input" data-ans="L'"> Europe compte actuellement combien de pays ?<div class="hint-text"></div></div>
+        <div class="sentence-row">10. Pendant la saison, <input type="text" class="gap-input" data-ans="les"> restaurants sont ouverts jusqu'à 23 heures.<div class="hint-text"></div></div>
+        <div class="sentence-row">11. J'aime <input type="text" class="gap-input" data-ans="la"> musique classique et <input type="text" class="gap-input" data-ans="l'"> opéra.<div class="hint-text"></div></div>
+    </div>
+
+    <script>
+        // --- AUDIO ---
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        function playSound(type) {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain); gain.connect(audioCtx.destination);
+            
+            if (type === 'success') {
+                // Korte, frisse 'ping'
+                osc.type = 'sine'; osc.frequency.setValueAtTime(800, audioCtx.currentTime);
+                gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
+                osc.start(); osc.stop(audioCtx.currentTime + 0.15);
+            } else if (type === 'streak') {
+                // "Power-up" geluid (oplopende toon), niet storend
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(400, audioCtx.currentTime);
+                osc.frequency.linearRampToValueAtTime(800, audioCtx.currentTime + 0.2);
+                gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+                gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+                osc.start(); osc.stop(audioCtx.currentTime + 0.3);
+            } else {
+                // Error (zacht en kort)
+                osc.type = 'sawtooth'; osc.frequency.setValueAtTime(150, audioCtx.currentTime);
+                gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+                gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
+                osc.start(); osc.stop(audioCtx.currentTime + 0.15);
+            }
+        }
+
+        // --- STATE ---
+        let streak = 0; let score = 0; let correctCount = 0;
+        const totalInputs = document.querySelectorAll('.gap-input').length;
+        
+        const streakEl = document.getElementById('streakCount');
+        const streakContainer = document.getElementById('streakContainer');
+        const scoreEl = document.getElementById('scoreCount');
+        const progressEl = document.getElementById('progressBar');
+        const headerEl = document.getElementById('mainHeader');
+
+        // --- EVENTS ---
+        document.querySelectorAll('.gap-input').forEach(input => {
+            input.dataset.mistakes = 0; input.dataset.lastWrong = "";
+            input.addEventListener('input', function() { checkSuccessOnly(this); });
+            input.addEventListener('blur', function() { 
+                if (this.value.trim() !== "" && !this.classList.contains('correct')) checkError(this); 
+            });
+            input.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') {
+                    if (this.value.trim() === "") return;
+                    if (isCorrect(this)) checkSuccessOnly(this); else checkError(this);
+                }
+            });
+        });
+
+        function isCorrect(input) { return input.value.trim() === input.getAttribute('data-ans'); }
+
+        function checkSuccessOnly(input) {
+            const hintBox = input.parentElement.querySelector('.hint-text');
+            if (isCorrect(input)) {
+                if (input.classList.contains('correct')) return;
+                
+                input.classList.remove('error'); input.classList.add('correct');
+                hintBox.classList.remove('visible');
+                
+                // GAME LOGIC
+                streak++; correctCount++;
+                
+                // Score berekening
+                let isHighStreak = streak >= 5;
+                let points = 10;
+                
+                if (isHighStreak) {
+                    points = 20; // Dubbele punten bij high streak!
+                    playSound('streak'); // Speciaal geluid
+                } else {
+                    playSound('success'); // Normaal geluid
+                }
+
+                score += points;
+                
+                // Visual updates
+                showFloatingPoints(input, points, isHighStreak);
+                updateUI();
+                focusNextInput(input);
+            } else {
+                input.classList.remove('error');
+            }
+        }
+
+        function checkError(input) {
+            const val = input.value.trim();
+            const ans = input.getAttribute('data-ans');
+            const hintBox = input.parentElement.querySelector('.hint-text');
+
+            if (!isCorrect(input)) {
+                // Soft checks (Hoofdletter etc)
+                if (val.toLowerCase() === ans.toLowerCase()) {
+                    showHint(hintBox, "💡 Let op de hoofdletter!");
+                    input.classList.add('error'); playSound('error'); return;
+                }
+                if (val.toLowerCase() === input.dataset.lastWrong.toLowerCase()) {
+                    input.classList.add('error'); playSound('error');
+                    setTimeout(() => { input.value = ''; }, 500); return;
+                }
+                
+                // Echte fout
+                input.dataset.lastWrong = val; input.classList.add('error');
+                playSound('error'); 
+                
+                streak = 0; // Reset streak
+                updateUI(); // Reset UI (glow gaat weg)
+
+                let mistakes = parseInt(input.dataset.mistakes) + 1;
+                input.dataset.mistakes = mistakes;
+
+                if (mistakes === 1) showHint(hintBox, "🤔 Fout. Probeer opnieuw.");
+                else if (mistakes === 2) {
+                     if (ans.toLowerCase() === 'la') showHint(hintBox, "💡 Tip: Vrouwelijk.");
+                     else if (ans.toLowerCase() === 'le') showHint(hintBox, "💡 Tip: Mannelijk.");
+                     else showHint(hintBox, "💡 Kijk goed naar de spelling.");
+                } else showHint(hintBox, `Antwoord: <b>${ans}</b>`);
+
+                setTimeout(() => { input.value = ''; input.focus(); }, 600);
+            }
+        }
+
+        function updateUI() {
+            streakEl.innerText = streak;
+            animateValue(scoreEl, parseInt(scoreEl.innerText), score, 300);
+            progressEl.style.width = (correctCount / totalInputs) * 100 + '%';
+
+            // STREAK MANAGEMENT
+            if (streak > 0) {
+                streakContainer.classList.add('active');
+            } else {
+                streakContainer.classList.remove('active');
+            }
+
+            // FLOW MODE (High Streak Visuals)
+            if (streak >= 5) {
+                if (!headerEl.classList.contains('high-streak')) {
+                    headerEl.classList.add('high-streak');
+                }
+            } else {
+                headerEl.classList.remove('high-streak');
+            }
+        }
+
+        function showFloatingPoints(el, amt, isGold) {
+            const rect = el.getBoundingClientRect();
+            const f = document.createElement('div');
+            // Kies class op basis van streak (blauw of goud)
+            f.className = isGold ? 'floating-points fp-gold' : 'floating-points fp-normal';
+            f.innerText = `+${amt} XP`;
+            f.style.left = (rect.left + 10) + 'px'; f.style.top = (rect.top - 20) + 'px';
+            document.body.appendChild(f);
+            setTimeout(() => f.remove(), 800);
+        }
+
+        function animateValue(obj, start, end, duration) {
+            let startTimestamp = null;
+            const step = (timestamp) => {
+                if (!startTimestamp) startTimestamp = timestamp;
+                const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+                obj.innerHTML = Math.floor(progress * (end - start) + start);
+                if (progress < 1) window.requestAnimationFrame(step);
+            };
+            window.requestAnimationFrame(step);
+        }
+
+        function showHint(el, msg) { el.innerHTML = msg; el.classList.add('visible'); }
+        function focusNextInput(c) {
+            const all = Array.from(document.querySelectorAll('.gap-input'));
+            const idx = all.indexOf(c);
+            if (idx >= 0 && idx < all.length - 1) all[idx+1].focus();
+        }
+    </script>
+</body>
+</html>
